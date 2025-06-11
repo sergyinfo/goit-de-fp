@@ -1,0 +1,9 @@
+.idea
+.venv
+__pycache__
+*.log
+!output.log
+*.env
+*.DS_Store
+*.csv
+configs.py
