@@ -1,0 +1,37 @@
+# Стартуємо з офіційного образу Airflow
+FROM apache/airflow:2.8.1-python3.9
+
+# Встановлюємо змінні середовища для Spark
+ENV SPARK_VERSION=3.3.0
+ENV HADOOP_VERSION=3
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
+
+# Перемикаємось на користувача root для встановлення пакетів
+USER root
+
+# Встановлюємо необхідні залежності: Java (для Spark) та wget
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+    openjdk-17-jre-headless \
+    wget \
+    && apt-get autoremove -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Завантажуємо, розпаковуємо та встановлюємо Spark
+RUN wget -q "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz" -O /tmp/spark.tgz && \
+    tar -xf /tmp/spark.tgz -C /opt && \
+    mv /opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} ${SPARK_HOME} && \
+    rm /tmp/spark.tgz
+
+# ВИПРАВЛЕНО: Надаємо права, використовуючи числовий ID користувача та групи (50000)
+RUN chown -R 50000:50000 ${SPARK_HOME}
+
+# Встановлюємо Python-залежність для Postgres
+# Перемикаємось на користувача airflow перед встановленням pip-пакетів
+USER airflow
+RUN pip install --no-cache-dir apache-airflow-providers-postgres
+
+# Повертаємо робочу директорію за замовчуванням
+WORKDIR /opt/airflow

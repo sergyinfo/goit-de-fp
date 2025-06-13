@@ -1,64 +1,85 @@
-version: '3.8'
-
-x-airflow-common: &airflow-common
-  image: apache/airflow:2.8.1-python3.9
-  user: "${AIRFLOW_UID:-50000}"
-  env_file:
-    - ./.env
-  volumes:
-    - ./dags:/opt/airflow/dags
-    - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
-    - ./config:/opt/airflow/config
-    - ./data:/opt/airflow/data
-    - ./scripts:/opt/airflow/scripts
-  networks:
-    - project-network
+# docker-compose-airflow.yml
+networks:
+  project-network:
+    external: true
+    name: goit-de-fp_project-network
 
 services:
   postgres:
     image: postgres:13
-    container_name: postgres
+    container_name: postgres-airflow
+    restart: always
     environment:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
       - POSTGRES_DB=airflow
     networks:
       - project-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
+  # Webserver тепер відповідає за побудову образу
   airflow-webserver:
-    <<: *airflow-common
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    image: goit-airflow-spark:latest
     container_name: airflow-webserver
-    command: webserver
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
+      - ./config:/opt/airflow/config
+      - ./data:/opt/airflow/data
+    networks:
+      - project-network
     ports:
       - "8082:8080"
+    command: >
+      bash -c "
+        airflow db upgrade &&
+        airflow users create --role Admin --username admin --email admin@example.com --firstname Admin --lastname User --password admin || true &&
+        airflow variables set 'de_project_home' '/opt/airflow' || true &&
+        airflow webserver
+      "
     depends_on:
-      - postgres
-      - airflow-init
-    restart: on-failure
+      postgres:
+        condition: service_healthy
 
+  # Планувальник тепер просто використовує вже побудований образ
   airflow-scheduler:
-    <<: *airflow-common
+    image: goit-airflow-spark:latest
     container_name: airflow-scheduler
-    command: scheduler
+    restart: always
+    env_file:
+      - ./.env
+    environment:
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./scripts:/opt/airflow/scripts
+      - ./config:/opt/airflow/config
+      - ./data:/opt/airflow/data
+    networks:
+      - project-network
+    command: bash -c "sleep 10; airflow scheduler"
     depends_on:
-      - postgres
-      - airflow-init
-    restart: on-failure
-
-  airflow-init:
-    <<: *airflow-common
-    container_name: airflow-init
-    entrypoint: /bin/bash
-    command:
-      - -c
-      - |
-        pip install apache-airflow-providers-cncf-kubernetes==7.5.0 && \
-        airflow db init && \
-        airflow users create --role Admin --username admin --email admin@example.com --firstname Admin --lastname User --password admin && \
-        airflow variables set 'de_project_home' '/opt/airflow'
-
-networks:
-  project-network:
-    external: true
-    name: goit-de-fp_project-network
+      postgres:
+        condition: service_healthy
+      # Додаємо залежність від веб-сервера, щоб гарантувати,
+      # що він почне будувати образ першим
+      airflow-webserver:
+        condition: service_started

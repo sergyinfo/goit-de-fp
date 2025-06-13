@@ -117,9 +117,9 @@ docker-compose up -d
 
 2.  **Запустіть та зробіть скріншоти DAG:**
     * Відкрийте Airflow UI (`http://localhost:8082`), знайдіть та запустіть DAG `batch_datalake_pipeline_dag`.
-    * Зробіть скріншот успішно виконаного графу.
+    * Успішно виконаний граф.
         ![Граф виконаного DAG](screenshots/batch_dag_graph.png)
-    * Зробіть скріншоти логів з виводом `df.show()` для кожного завдання.
+    * Логи з виводом `df.show()` для кожного завдання.
         ![Результат Bronze](screenshots/batch_bronze_output.png)
         ![Результат Silver](screenshots/batch_silver_output.png)
         ![Результат Gold](screenshots/batch_gold_output.png)
