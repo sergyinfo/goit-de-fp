@@ -1,0 +1,64 @@
+version: '3.8'
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.8.1-python3.9
+  user: "${AIRFLOW_UID:-50000}"
+  env_file:
+    - ./.env
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - ./config:/opt/airflow/config
+    - ./data:/opt/airflow/data
+    - ./scripts:/opt/airflow/scripts
+  networks:
+    - project-network
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    networks:
+      - project-network
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    command: webserver
+    ports:
+      - "8082:8080"
+    depends_on:
+      - postgres
+      - airflow-init
+    restart: on-failure
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    depends_on:
+      - postgres
+      - airflow-init
+    restart: on-failure
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        pip install apache-airflow-providers-cncf-kubernetes==7.5.0 && \
+        airflow db init && \
+        airflow users create --role Admin --username admin --email admin@example.com --firstname Admin --lastname User --password admin && \
+        airflow variables set 'de_project_home' '/opt/airflow'
+
+networks:
+  project-network:
+    external: true
+    name: goit-de-fp_project-network

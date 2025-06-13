@@ -1,0 +1,81 @@
+networks:
+  project-network:
+    driver: bridge
+
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: olympic_dataset
+    volumes:
+      - ./db_init:/docker-entrypoint-initdb.d
+    networks:
+      - project-network
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports: ["8080:8080"]
+    networks: [project-network]
+    depends_on: [mysql-db]
+
+  zookeeper:
+    image: bitnami/zookeeper:3
+    container_name: zookeeper
+    restart: always
+    ports: ["2181:2181"]
+    environment: { ALLOW_ANONYMOUS_LOGIN: 'yes' }
+    networks: [project-network]
+
+  kafka:
+    image: bitnami/kafka:3
+    container_name: kafka
+    restart: always
+    ports: ["9092:9092"]
+    networks: [project-network]
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: 'yes'
+      KAFKA_CFG_LISTENERS: "INTERNAL://:9093,EXTERNAL://:9092"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "INTERNAL://kafka:9093,EXTERNAL://localhost:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:latest
+    container_name: kafdrop
+    restart: always
+    ports: ["19000:9000"]
+    networks: [project-network]
+    depends_on: [kafka]
+    environment: { KAFKA_BROKERCONNECT: "kafka:9093" }
+
+  spark-master:
+    build: .
+    container_name: spark-master
+    restart: always
+    ports: ["8081:8080", "7077:7077"]
+    networks: [project-network]
+    volumes: ["./scripts:/opt/bitnami/spark/scripts", "./config:/opt/bitnami/spark/config", "./data:/opt/bitnami/spark/data"]
+    environment:
+      - SPARK_MODE=master
+      - SPARK_DRIVER_MEMORY=4g
+
+  spark-worker:
+    build: .
+    container_name: spark-worker
+    restart: always
+    depends_on: [spark-master]
+    networks: [project-network]
+    volumes: ["./scripts:/opt/bitnami/spark/scripts", "./config:/opt/bitnami/spark/config", "./data:/opt/bitnami/spark/data"]
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=4g
