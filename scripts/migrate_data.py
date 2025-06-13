@@ -1,5 +1,3 @@
-# scripts/migrate_data.py
-
 import configparser
 from pyspark.sql import SparkSession
 
@@ -36,7 +34,6 @@ def main():
     remote_conf, local_conf = config['mysql_remote'], config['mysql_local']
     REMOTE_MYSQL_URL = f"jdbc:mysql://{remote_conf['host']}:{remote_conf['port']}/{remote_conf['database']}"
 
-    # ОНОВЛЕНІ ПОВНІ СХЕМИ
     TABLES = {
         "athlete_bio": "athlete_id INTEGER, name STRING, sex STRING, born STRING, height STRING, weight STRING, country STRING, country_noc STRING, description STRING, special_notes STRING",
         "athlete_event_results": "edition STRING, edition_id INTEGER, country_noc STRING, sport STRING, event STRING, result_id BIGINT, athlete STRING, athlete_id INTEGER, pos STRING, medal STRING, isTeamSport STRING"

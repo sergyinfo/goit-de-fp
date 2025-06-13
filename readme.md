@@ -28,6 +28,7 @@
 ├── .env
 ├── docker-compose-airflow.yml
 ├── docker-compose.yml
+├── Dockerfile.airflow
 └── Dockerfile
 ```
 
@@ -115,8 +116,7 @@ docker-compose up -d
     docker-compose -f docker-compose-airflow.yml up -d
     ```
 
-2.  **Запустіть та зробіть скріншоти DAG:**
-    * Відкрийте Airflow UI (`http://localhost:8082`), знайдіть та запустіть DAG `batch_datalake_pipeline_dag`.
+2.  * Відкрийте Airflow UI (`http://localhost:8082`), знайдіть та запустіть DAG `batch_datalake_pipeline_dag`.
     * Успішно виконаний граф.
         ![Граф виконаного DAG](screenshots/batch_dag_graph.png)
     * Логи з виводом `df.show()` для кожного завдання.

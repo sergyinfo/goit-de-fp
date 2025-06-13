@@ -21,7 +21,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Webserver тепер відповідає за побудову образу
   airflow-webserver:
     build:
       context: .
@@ -56,7 +55,6 @@ services:
       postgres:
         condition: service_healthy
 
-  # Планувальник тепер просто використовує вже побудований образ
   airflow-scheduler:
     image: goit-airflow-spark:latest
     container_name: airflow-scheduler
@@ -79,7 +77,5 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      # Додаємо залежність від веб-сервера, щоб гарантувати,
-      # що він почне будувати образ першим
       airflow-webserver:
         condition: service_started

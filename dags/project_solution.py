@@ -15,8 +15,6 @@ with DAG(
     catchup=False,
     tags=['goit-de-fp', 'batch'],
 ) as dag:
-
-    # ВИПРАВЛЕНО: Використовуємо повний шлях до spark-submit
     landing_to_bronze = BashOperator(
         task_id='landing_to_bronze',
         bash_command=f"{SPARK_SUBMIT_PATH} {os.path.join(SCRIPT_PATH, 'landing_to_bronze.py')}"

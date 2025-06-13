@@ -45,7 +45,7 @@ EVENT_SCHEMA = StructType([
 
 def process_batch(batch_df: DataFrame, batch_id: int):
     """
-    Обробляє кожен мікро-батч. ВСЯ ЛОГІКА ТЕПЕР ТУТ.
+    Обробляє кожен мікро-батч
     """
     print(f"--- Processing Batch ID: {batch_id} ---")
 
@@ -56,7 +56,6 @@ def process_batch(batch_df: DataFrame, batch_id: int):
     print(f"Batch {batch_id} has {batch_df.count()} events. Starting processing...")
 
     # Етап 4: Об'єднуємо мікро-батч з Kafka зі статичною таблицею біографії
-    # athlete_bio_filtered_df - це глобальна змінна, доступна тут
     joined_df = batch_df.join(broadcast(athlete_bio_filtered_df), ["athlete_id"], "inner").na.fill({"medal": "nan"})
 
     # Етап 5: Агрегація
@@ -107,7 +106,7 @@ def main():
     spark.sparkContext.setLogLevel("ERROR")
     print("Spark session created.")
 
-    # Етап 1 і 2: Зчитуємо та фільтруємо біографічні дані ОДИН РАЗ
+    # Етап 1 і 2: Зчитуємо та фільтруємо біографічні дані
     # Робимо athlete_bio_filtered_df глобальною, щоб вона була доступна в process_batch
     global athlete_bio_filtered_df
     athlete_bio_df = spark.read.format("jdbc").option("url", MYSQL_URL).options(**MYSQL_PROPS).option("dbtable",
@@ -129,7 +128,6 @@ def main():
         .option("startingOffsets", "earliest") \
         .load()
 
-    # ВИПРАВЛЕНО: Правильний спосіб видалити поле зі схеми
     fields_without_sex = [field for field in EVENT_SCHEMA.fields if field.name != "sex"]
     event_schema_without_sex = StructType(fields_without_sex)
 

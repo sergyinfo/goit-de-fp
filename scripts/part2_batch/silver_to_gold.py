@@ -23,8 +23,7 @@ def main():
     athlete_bio_df = spark.read.parquet(os.path.join(SILVER_PATH, "athlete_bio"))
     athlete_events_df = spark.read.parquet(os.path.join(SILVER_PATH, "athlete_event_results"))
 
-    # ВИПРАВЛЕНО: Усуваємо неоднозначність стовпчика 'country_noc'
-    # Спосіб 1: Видаляємо дублюючий стовпчик з однієї з таблиць перед join
+    # Видаляємо дублюючий стовпчик з однієї з таблиць перед join
     events_df_unique = athlete_events_df.drop("country_noc", "sex")
 
     # Join таблиць
@@ -39,7 +38,7 @@ def main():
         .withColumn("timestamp", current_timestamp()) \
         .na.fill({"medal": "nan"})
 
-    # Виводимо результат для логів згідно з вимогами завдання
+    # Виводимо результат для логів
     print("Final Gold DataFrame schema and sample data:")
     gold_df.show(5, truncate=False)
 
